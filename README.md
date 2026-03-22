@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
@@ -16,8 +16,6 @@
         .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #ef4444; z-index: 10; }
         button { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 15px 40px; font-size: 20px; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
         button:disabled { background: #475569; box-shadow: none; cursor: not-allowed; }
-        
-        /* Modal Popup */
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; }
         .modal { background: white; color: #1e293b; padding: 40px; border-radius: 25px; width: 85%; max-width: 350px; animation: bounce 0.6s ease; }
         @keyframes bounce { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
@@ -49,35 +47,55 @@
     </div>
 
     <script>
-        const nums = [4, 21, 3, 2, 50, 11, 5, 8, 7, 9, 26];
+        // Your number list (including a new 100 option for the jackpot)
+        const nums = [4, 21, 3, 2, 50, 11, 5, 8, 7, 9, 26, 100];
         const max = Math.max(...nums);
-        const prizes = nums.map(n => ({ val: n, weight: (max + 5) - n }));
+        
+        // Regular weights (High numbers = Low probability)
+        const prizes = nums.map(n => ({ val: n, weight: n === 100 ? 0 : (max + 5) - n }));
 
         function getPrize() {
+            // Check spin count in local storage
+            let spinCount = parseInt(localStorage.getItem('tamim_spins') || '0');
+            spinCount++;
+            localStorage.setItem('tamim_spins', spinCount);
+
+            // LOGIC: Every 5th spin gets the 100 TK jackpot
+            if (spinCount % 5 === 0) {
+                return { val: 100 };
+            }
+
+            // Otherwise, use weighted random
             let total = prizes.reduce((s, p) => s + p.weight, 0);
             let r = Math.random() * total;
             for (let p of prizes) {
                 if (r < p.weight) return p;
                 r -= p.weight;
             }
+            return prizes[0];
         }
 
         function spin() {
-            document.getElementById('spinBtn').disabled = true;
-            const winIdx = nums.indexOf(getPrize().val);
-            const deg = (360 / nums.length);
-            const rotation = (3600) + (360 - (winIdx * deg)) - (deg / 2);
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
 
+            const selectedPrize = getPrize();
+            const winIdx = nums.indexOf(selectedPrize.val);
+            const deg = (360 / nums.length);
+            
+            // Calculate rotation
+            const rotation = (3600) + (360 - (winIdx * deg)) - (deg / 2);
             document.getElementById('wheel').style.transform = `rotate(${rotation}deg)`;
 
             setTimeout(() => {
                 confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
                 const now = new Date();
-                document.getElementById('msg').innerHTML = `আপনি তামিমের কাছ থেকে জিতেছেন<div class="prize">${nums[winIdx]} টাকা</div>`;
-                document.getElementById('ts').innerText = `ID: ${Math.floor(Math.random()*10000)} | ${now.toLocaleString('bn-BD')}`;
+                document.getElementById('msg').innerHTML = `আপনি তামিমের কাছ থেকে জিতেছেন<div class="prize">${selectedPrize.val} টাকা</div>`;
+                document.getElementById('ts').innerText = `Spin #${localStorage.getItem('tamim_spins')} | ID: ${Math.floor(Math.random()*10000)} | ${now.toLocaleString('bn-BD')}`;
                 document.getElementById('overlay').style.display = 'flex';
             }, 5200);
         }
     </script>
 </body>
 </html>
+
